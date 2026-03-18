@@ -16,14 +16,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed Load .env")
 	}
-	port := os.Getenv("PORT")
-	mode := os.Getenv("MODE")
-
-	//running gin
-	if mode == "release" {
-		mode = gin.ReleaseMode
-		gin.SetMode(mode)
-	}
 
 	// database
 	db := database.SettupDatabase()
@@ -35,9 +27,17 @@ func main() {
 	if err := sqlDB.Ping(); err != nil {
 		log.Fatal("Database not connected")
 	}
-
 	log.Println("Database connected!")
 
+	//running gin
+	port := os.Getenv("PORT")
+	mode := os.Getenv("MODE")
+
+	// debug
+	if mode == "debug" {
+		mode = gin.DebugMode
+		gin.SetMode(mode)
+	}
 	r := http.SettupRoute()
 	r.Run(":" + port)
 }
