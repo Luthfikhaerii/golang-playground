@@ -2,6 +2,7 @@ package database
 
 import (
 	"fmt"
+	"golang-playground/internal/model"
 	"log"
 
 	"gorm.io/driver/mysql"
@@ -28,6 +29,11 @@ func SettupDatabase() *gorm.DB {
 
 	if err != nil {
 		log.Fatal("failed connect database")
+	}
+
+	err = db.AutoMigrate(&model.User{})
+	if err != nil {
+		log.Fatal("failed migrate")
 	}
 
 	return db

@@ -9,11 +9,9 @@ import (
 func SettupRoute() *gin.Engine {
 	r := gin.Default()
 
+	routes.TestRoute(r)
 	r.Group("/api")
 	{
-		r.GET("/", func(c *gin.Context) {
-			c.JSON(200, gin.H{"msg": "hello world"})
-		})
 		routes.UserRoute(r)
 	}
 	return r

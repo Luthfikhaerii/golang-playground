@@ -1,6 +1,7 @@
 package main
 
 import (
+	"golang-playground/internal/database"
 	"golang-playground/internal/delivery/http"
 	"log"
 	"os"
@@ -19,14 +20,24 @@ func main() {
 	mode := os.Getenv("MODE")
 
 	//running gin
-	if mode == "realease" {
-		mode := gin.ReleaseMode
+	if mode == "release" {
+		mode = gin.ReleaseMode
 		gin.SetMode(mode)
 	}
 
-	r := http.SettupRoute()
-
 	// database
+	db := database.SettupDatabase()
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	if err := sqlDB.Ping(); err != nil {
+		log.Fatal("Database not connected")
+	}
+
+	log.Println("Database connected!")
+
+	r := http.SettupRoute()
 	r.Run(":" + port)
 }
