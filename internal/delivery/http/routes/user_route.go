@@ -2,6 +2,7 @@ package routes
 
 import (
 	"golang-playground/internal/delivery/http/handler"
+	"golang-playground/internal/delivery/http/middlewares"
 	"golang-playground/internal/repository"
 	"golang-playground/internal/usecase"
 
@@ -15,6 +16,6 @@ func UserRoute(r *gin.RouterGroup, db *gorm.DB) {
 	handler := handler.NewUserHandler(usecase)
 	userGroup := r.Group("/user")
 	{
-		userGroup.POST("/register", handler.Register)
+		userGroup.POST("/register", middlewares.AuthMiddleware(), handler.Register)
 	}
 }

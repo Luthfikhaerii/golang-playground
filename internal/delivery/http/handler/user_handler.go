@@ -32,6 +32,6 @@ func (h *UserHandler) Register(c *gin.Context) {
 	c.SetCookie("accessToken", accessToken.Token, 3600*24, "/", "", false, true)
 
 	c.JSON(200, gin.H{
-		"accessToken": accessToken,
+		"accessToken": accessToken.Token,
 	})
 }
