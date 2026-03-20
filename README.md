@@ -12,4 +12,6 @@ mysql / psql
 godotenv
 bcrypt
 migrate
+validator
+zap
 redis

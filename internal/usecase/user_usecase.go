@@ -7,6 +7,9 @@ import (
 	"golang-playground/internal/repository"
 	"golang-playground/pkg/bcrypt"
 	"golang-playground/pkg/jwt"
+	"golang-playground/pkg/logger"
+
+	"go.uber.org/zap"
 )
 
 type UserUsecase struct {
@@ -18,12 +21,24 @@ func NewUserUsecase(repo *repository.UserRepository) *UserUsecase {
 }
 
 func (u *UserUsecase) Create(user dto.CreateUserRequest) (*dto.Auth, error) {
-	if existing, _ := u.repo.FindOneByEmail(user.Email); existing != nil {
+	existing, err := u.repo.FindOneByEmail(user.Email)
+	if err != nil {
+		logger.Log.Error("find_user_failed",
+			zap.Error(err),
+		)
+		return nil, err
+	}
+
+	if existing != nil {
 		return nil, errors.New("email already exists")
 	}
 
 	hashedPassword, err := bcrypt.HashPassword(user.Password)
 	if err != nil {
+		logger.Log.Error("hash_password_failed",
+			zap.Error(err),
+		)
+
 		return nil, err
 	}
 
@@ -33,6 +48,9 @@ func (u *UserUsecase) Create(user dto.CreateUserRequest) (*dto.Auth, error) {
 		Password: hashedPassword,
 	}
 	if err := u.repo.Create(newUser); err != nil {
+		logger.Log.Error("create_user_failed",
+			zap.Error(err),
+		)
 		return nil, err
 	}
 

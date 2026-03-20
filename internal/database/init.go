@@ -3,6 +3,7 @@ package database
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -13,11 +14,11 @@ import (
 // migrate -path migrations -database "mysql://root:password@tcp(localhost:3306)/dbname" down 1
 
 func SettupDatabase() *gorm.DB {
-	host := "localhost"
-	port := "3306"
-	user := "root"
-	password := ""
-	dbname := "golang"
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
 
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?parseTime=true",

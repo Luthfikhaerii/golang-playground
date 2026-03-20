@@ -3,8 +3,10 @@ package handler
 import (
 	"golang-playground/internal/dto"
 	"golang-playground/internal/usecase"
+	"golang-playground/pkg/logger"
 
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type UserHandler struct {
@@ -19,13 +21,17 @@ func (h *UserHandler) Register(c *gin.Context) {
 	var req dto.CreateUserRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"message": err.Error()})
+		logger.Log.Error("Invalid request", zap.Error(err))
+
+		c.JSON(400, gin.H{"message": "invalid request"})
 		return
 	}
 
 	accessToken, err := h.usecase.Create(req)
 	if err != nil {
-		c.JSON(400, gin.H{"message": err.Error()})
+		logger.Log.Error("Register failed", zap.Error(err))
+
+		c.JSON(400, gin.H{"message": "regiter failed"})
 		return
 	}
 

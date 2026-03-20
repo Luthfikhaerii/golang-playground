@@ -3,6 +3,7 @@ package main
 import (
 	"golang-playground/internal/database"
 	"golang-playground/internal/delivery/http"
+	"golang-playground/pkg/logger"
 	"log"
 	"os"
 
@@ -38,6 +39,11 @@ func main() {
 		mode = gin.DebugMode
 		gin.SetMode(mode)
 	}
+
+	//loger
+	logger.Init()
+	defer logger.Log.Sync()
+
 	r := http.SettupRoute()
 	r.Run(":" + port)
 }
