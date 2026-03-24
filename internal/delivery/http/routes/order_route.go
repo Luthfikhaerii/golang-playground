@@ -3,17 +3,16 @@ package routes
 import (
 	"golang-playground/internal/delivery/http/handler"
 	"golang-playground/internal/messaging"
+	"golang-playground/internal/repository"
 	"golang-playground/internal/usecase"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func NewRouter(r *gin.RouterGroup, pub *messaging.KafkaPublisher) {
-	repo := "repo"
+func OrderRouter(r *gin.RouterGroup, db *gorm.DB, pub *messaging.KafkaProducer) {
+	repo := repository.NewOrderRepository(db)
 	usecase := usecase.NewOrderUsecase(pub, repo)
 	handler := handler.NewOrderHandler(usecase)
-	userGroup := r.Group("/user")
-	{
-		userGroup.POST("/order", handler.Create)
-	}
+	r.POST("/order", handler.Create)
 }

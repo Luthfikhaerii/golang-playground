@@ -22,6 +22,11 @@ func SettupDatabase() *gorm.DB {
 	password := os.Getenv("DB_PASSWORD")
 	dbname := os.Getenv("DB_NAME")
 
+	log.Println("DB_HOST:", host)
+	log.Println("DB_PORT:", port)
+	log.Println("DB_USER:", user)
+	log.Println("DB_NAME:", dbname)
+
 	dsn := fmt.Sprintf(
 		"%s:%s@tcp(%s:%s)/%s?parseTime=true",
 		user,
@@ -31,10 +36,7 @@ func SettupDatabase() *gorm.DB {
 		dbname,
 	)
 
-	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-
-	var db *gorm.DB
-	var err error
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 	// Retry konek ke MySQL maksimal 10 kali
 	for i := 0; i < 10; i++ {

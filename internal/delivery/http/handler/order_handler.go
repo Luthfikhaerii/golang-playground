@@ -27,7 +27,7 @@ func (h *OrderHandler) Create(c *gin.Context) {
 		return
 	}
 
-	err := h.usecase.CreateOrder(req)
+	err := h.usecase.ProcessPayment("Order ID")
 	if err != nil {
 		logger.Log.Error("Register failed", zap.Error(err))
 

@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SettupRoute(db *gorm.DB, publisher *messaging.KafkaPublisher) *gin.Engine {
+func SettupRoute(db *gorm.DB, producer *messaging.KafkaProducer) *gin.Engine {
 	//init route
 	r := gin.Default()
 
@@ -23,6 +23,7 @@ func SettupRoute(db *gorm.DB, publisher *messaging.KafkaPublisher) *gin.Engine {
 	{
 		routes.UploadRoute(api)
 		routes.UserRoute(api, db)
+		routes.OrderRouter(api, db, producer)
 	}
 	return r
 }

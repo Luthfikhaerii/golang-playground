@@ -4,6 +4,7 @@ import (
 	"golang-playground/internal/database"
 	"golang-playground/internal/delivery/http"
 	"golang-playground/internal/messaging"
+	"golang-playground/pkg/kafka"
 	"golang-playground/pkg/logger"
 	"log"
 	"os"
@@ -37,11 +38,12 @@ func main() {
 
 	//publisher
 	brokers := []string{"localhost:9092"}
-	publisher, err := messaging.NewKafkaPublisher(brokers)
+	rawProducer, err := kafka.NewProducer(brokers)
 	if err != nil {
 		log.Fatalf("failed to create publisher: %v", err)
 	}
-	defer publisher.Close()
+	defer rawProducer.Close()
+	producer := messaging.NewKafkaProducer(rawProducer)
 
 	//running gin
 	port := os.Getenv("PORT")
@@ -53,10 +55,6 @@ func main() {
 		gin.SetMode(mode)
 	}
 
-	r := http.SettupRoute(db, publisher)
+	r := http.SettupRoute(db, producer)
 	r.Run(":" + port)
-}
-
-func getEnv(s1, s2 string) {
-	panic("unimplemented")
 }

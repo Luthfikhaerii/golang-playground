@@ -2,89 +2,82 @@ package main
 
 import (
 	"context"
+	"golang-playground/internal/database"
+	deliveryMessaging "golang-playground/internal/delivery/messaging"
+	"golang-playground/internal/messaging"
+	"golang-playground/internal/repository"
+	"golang-playground/internal/usecase"
+	"golang-playground/pkg/kafka"
+	"golang-playground/pkg/logger"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
-	"go.uber.org/zap"
-
-	"golang-playground/internal/database"
-	deliveryMessaging "golang-playground/internal/delivery/messaging"
-	"golang-playground/internal/messaging"
-	"golang-playground/internal/repository"
-	"golang-playground/internal/usecase"
-	"golang-playground/pkg/logger"
-	"log"
 )
 
 func main() {
-	// env
-	if err := godotenv.Load(); err != nil {
-		log.Fatal("failed load .env")
+	//env
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Failed Load .env")
 	}
 
-	// logger
+	//loger
 	logger.Init()
 	defer logger.Log.Sync()
-	logger.Log.Info("starting worker service")
 
-	// dependencies
+	// producer
 	brokers := []string{"localhost:9092"}
-	publisher, err := messaging.NewKafkaPublisher(brokers)
+	rawProducer, err := kafka.NewProducer(brokers)
 	if err != nil {
-		log.Fatalf("failed to create publisher: %v", err)
+		log.Fatalf("failed to create producer: %v", err)
 	}
-	defer publisher.Close()
+	defer rawProducer.Close()
+	producer := messaging.NewKafkaProducer(rawProducer)
 
+	// dependency
 	db := database.SettupDatabase()
 	orderRepo := repository.NewOrderRepository(db)
-	orderUsecase := usecase.NewOrderUsecase(publisher, orderRepo)
+	orderUsecase := usecase.NewOrderUsecase(producer, orderRepo)
 
-	// context
+	// context (untuk graceful shutdown)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// run consumers
-	go RunPaymentResultConsumer(ctx, orderUsecase)
-	go RunOrderNotificationConsumer(ctx)
-	// tambah consumer baru? tinggal go RunXxxConsumer(ctx, ...) di sini
+	// run consumers (pakai goroutine)
+	go RunPaymentConsumer(ctx, brokers, orderUsecase)
+	go RunNotificationConsumer(ctx, brokers)
 
-	// SYSTEM SHUTDOWN CRASH
-	terminateSignals := make(chan os.Signal, 1)
-	signal.Notify(terminateSignals, syscall.SIGINT, syscall.SIGTERM)
+	// raceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
-	stop := false
-	for !stop {
-		select {
-		case s := <-terminateSignals:
-			logger.Log.Info("shutting down worker", zap.String("signal", s.String()))
-			cancel()
-			stop = true
-		}
-	}
+	<-stop
+	log.Println("shutting down worker...")
+	cancel()
 
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
+	log.Println("worker stopped")
 }
 
-// Running consumer Payment
-func RunPaymentResultConsumer(ctx context.Context, orderUsecase *usecase.OrderUsecase) {
-	logger.Log.Info("setup payment result consumer")
+// PAYMENT CONSUMER
+func RunPaymentConsumer(ctx context.Context, brokers []string, orderUsecase *usecase.OrderUsecase) {
+	log.Println("setup payment consumer")
 
-	//group
-	consumerGroup := messaging.NewKafkaConsumerGroup(os.Getenv("KAFKA_GROUP_ID"))
+	group, _ := kafka.NewConsumerGroup(brokers, "payment-service")
+	handler := deliveryMessaging.NewPaymentConsumer(orderUsecase)
 
-	//handler
-	handler := deliveryMessaging.NewPaymentResultConsumer(orderUsecase)
-
-	//group, topic, & handler
-	messaging.ConsumeTopic(ctx, consumerGroup, messaging.TopicOrderPaymentResult, handler.Consume)
+	messaging.ConsumeTopic(ctx, group, messaging.TopicOrderCreated, handler.Consume)
 }
 
-// Running consumer Order
-func RunOrderNotificationConsumer(ctx context.Context) {
-	logger.Log.Info("setup order notification consumer")
-	consumerGroup := messaging.NewKafkaConsumerGroup(os.Getenv("KAFKA_GROUP_ID"))
-	handler := deliveryMessaging.NewOrderNotificationConsumer()
-	messaging.ConsumeTopic(ctx, consumerGroup, messaging.TopicOrderNotification, handler.Consume)
+// NOTIFICATION CONSUMER
+func RunNotificationConsumer(ctx context.Context, brokers []string) {
+	log.Println("setup notification consumer")
+
+	group, _ := kafka.NewConsumerGroup(brokers, "notification-service")
+	handler := deliveryMessaging.NewNotificationConsumer()
+
+	messaging.ConsumeTopic(ctx, group, messaging.TopicPaymentCompleted, handler.Consume)
 }
