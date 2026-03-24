@@ -3,6 +3,7 @@ package main
 import (
 	"golang-playground/internal/database"
 	"golang-playground/internal/delivery/http"
+	"golang-playground/internal/messaging"
 	"golang-playground/pkg/logger"
 	"log"
 	"os"
@@ -18,6 +19,10 @@ func main() {
 		log.Fatal("Failed Load .env")
 	}
 
+	//loger
+	logger.Init()
+	defer logger.Log.Sync()
+
 	// database
 	db := database.SettupDatabase()
 	sqlDB, err := db.DB()
@@ -30,6 +35,14 @@ func main() {
 	}
 	log.Println("Database connected!")
 
+	//publisher
+	brokers := []string{"localhost:9092"}
+	publisher, err := messaging.NewKafkaPublisher(brokers)
+	if err != nil {
+		log.Fatalf("failed to create publisher: %v", err)
+	}
+	defer publisher.Close()
+
 	//running gin
 	port := os.Getenv("PORT")
 	mode := os.Getenv("MODE")
@@ -40,10 +53,10 @@ func main() {
 		gin.SetMode(mode)
 	}
 
-	//loger
-	logger.Init()
-	defer logger.Log.Sync()
-
-	r := http.SettupRoute()
+	r := http.SettupRoute(db, publisher)
 	r.Run(":" + port)
+}
+
+func getEnv(s1, s2 string) {
+	panic("unimplemented")
 }

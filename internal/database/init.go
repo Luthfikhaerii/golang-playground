@@ -2,8 +2,10 @@ package database
 
 import (
 	"fmt"
+	"golang-playground/pkg/logger"
 	"log"
 	"os"
+	"time"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -29,10 +31,26 @@ func SettupDatabase() *gorm.DB {
 		dbname,
 	)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatal("failed connect database")
+	// db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	var db *gorm.DB
+	var err error
+
+	// Retry konek ke MySQL maksimal 10 kali
+	for i := 0; i < 10; i++ {
+		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+		if err == nil {
+			break
+		}
+		log.Printf("Waiting for database... attempt %d/10", i+1)
+		time.Sleep(3 * time.Second)
 	}
+
+	if err != nil {
+		logger.Log.Error("failed connect database")
+	}
+
+	logger.Log.Info("Database success conected")
 
 	return db
 }

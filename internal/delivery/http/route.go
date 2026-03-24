@@ -1,16 +1,17 @@
 package http
 
 import (
-	"golang-playground/internal/database"
 	"golang-playground/internal/delivery/http/middlewares"
 	"golang-playground/internal/delivery/http/routes"
+	"golang-playground/internal/messaging"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-func SettupRoute() *gin.Engine {
+func SettupRoute(db *gorm.DB, publisher *messaging.KafkaPublisher) *gin.Engine {
+	//init route
 	r := gin.Default()
-	db := database.SettupDatabase()
 
 	//global
 	r.Use(middlewares.LoggerMiddleware())
