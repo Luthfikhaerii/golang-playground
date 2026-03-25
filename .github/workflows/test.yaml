@@ -1,0 +1,30 @@
+name: TEST
+
+on:
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main, develop]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            # 1. clone repository project
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+              # 2. install Go
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: "1.22"
+
+              # 3. download dependency
+            - name: Download dependencies
+              run: go mod download
+
+              # 4. running test
+            - name: Run tests
+              run: go test ./... -v -cover

@@ -1,0 +1,72 @@
+name: DOCKER
+
+on:
+    push:
+        branches: [main]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Go
+              uses: actions/setup-go@v5
+              with:
+                  go-version: "1.22"
+
+            - name: Download dependencies
+              run: go mod download
+
+            - name: Run tests
+              run: go test ./... -v -cover
+
+    build:
+        runs-on: ubuntu-latest
+        needs: test
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Login ke Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Build & push image
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  push: true
+                  tags: |
+                      ${{ secrets.DOCKER_USERNAME }}/golang-playground:latest
+                      ${{ secrets.DOCKER_USERNAME }}/golang-playground:${{ github.sha }}
+
+    deploy:
+        runs-on: ubuntu-latest
+        needs: build
+
+        steps:
+            - name: Deploy ke VPS
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.VPS_HOST }}
+                  username: ${{ secrets.VPS_USER }}
+                  key: ${{ secrets.VPS_SSH_KEY }}
+                  script: |
+                      cd /app/golang-playground
+
+                      # pull image terbaru
+                      docker compose pull
+
+                      # restart container dengan image baru
+                      docker compose up -d --force-recreate api worker
+
+                      # hapus image lama yang tidak terpakai
+                      docker image prune -f
+
+                      echo "Deploy success!"
